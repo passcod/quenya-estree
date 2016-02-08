@@ -1,0 +1,33 @@
+{
+  "name": "quenya-babel",
+  "version": "1.0.0",
+  "description": "Context enhancer for Quenya using Babel",
+  "main": "index.js",
+  "bin": "bin/quenya-babel.js",
+  "scripts": {
+    "test": "standard"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/passcod/quenya-babel.git"
+  },
+  "keywords": [
+    "quenya",
+    "enhancer",
+    "doc",
+    "documentation",
+    "babel"
+  ],
+  "author": "Félix Saparelli <me@passcod.name> (https://passcod.name)",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/passcod/quenya-babel/issues"
+  },
+  "homepage": "https://github.com/passcod/quenya-babel#readme",
+  "devDependencies": {
+    "standard": "^5.4.1"
+  },
+  "dependencies": {
+    "babel-core": "^6.4.5"
+  }
+}
