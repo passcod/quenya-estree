@@ -1,6 +1,6 @@
 {
   "name": "quenya-estree",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Context enhancer for Quenya using ESTree parsers",
   "main": "index.js",
   "scripts": {
