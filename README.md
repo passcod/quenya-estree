@@ -43,8 +43,6 @@ plug in your own):
 - [Espree]: `require('quenya-estree/espree')(espree options)`
 - [Esprima]: `require('quenya-estree/esprima')(esprima options)`
 
-To use any of these, you'll need to install the corresponding parser with npm.
-
 [Acorn]: https://www.npmjs.com/package/acorn
 [Babel]: https://www.npmjs.com/package/babel-core
 [Babylon]: https://www.npmjs.com/package/babylon
