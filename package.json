@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "Context enhancer for Quenya using ESTree parsers",
   "main": "index.js",
-  "bin": "bin/quenya-estree.js",
   "scripts": {
     "test": "standard"
   },
