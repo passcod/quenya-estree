@@ -1,33 +1,46 @@
 {
-  "name": "quenya-babel",
+  "name": "quenya-estree",
   "version": "1.0.0",
-  "description": "Context enhancer for Quenya using Babel",
+  "description": "Context enhancer for Quenya using ESTree parsers",
   "main": "index.js",
-  "bin": "bin/quenya-babel.js",
+  "bin": "bin/quenya-estree.js",
   "scripts": {
     "test": "standard"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/passcod/quenya-babel.git"
+    "url": "git+https://github.com/passcod/quenya-estree.git"
   },
   "keywords": [
     "quenya",
     "enhancer",
     "doc",
     "documentation",
-    "babel"
+    "estree",
+    "acorn",
+    "babel",
+    "babylon",
+    "espree",
+    "esprima"
   ],
   "author": "Félix Saparelli <me@passcod.name> (https://passcod.name)",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/passcod/quenya-babel/issues"
+    "url": "https://github.com/passcod/quenya-estree/issues"
   },
-  "homepage": "https://github.com/passcod/quenya-babel#readme",
+  "homepage": "https://github.com/passcod/quenya-estree#readme",
   "devDependencies": {
+    "quenya": "^1.0.4",
     "standard": "^5.4.1"
   },
+  "peerDependencies": {
+    "acorn": "^2.7.0",
+    "babel-core": "^6.4.5",
+    "babylon": "^6.4.5",
+    "espree": "^3.0.1",
+    "esprima": "^2.7.2"
+  },
   "dependencies": {
-    "babel-core": "^6.4.5"
+    "lodash.memoize": "^4.0.1"
   }
 }

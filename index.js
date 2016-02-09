@@ -1,97 +1,144 @@
 'use strict'
-//! Quenya Babel Enhancer
+//! Quenya ESTree Enhancer
 //
-// Takes a Quenya object, uses Babel to parse the js sources, then matches up
-// each doc comment context with its corresponding origin and type from the
-// AST.
+// Takes Quenya objects, uses *any [ESTree]-compatible parser* (that produces
+// `{ line: 1, column: 0}` position information) to parse the js sources, then
+// matches up each doc comment context with its corresponding AST node.
 //
-// Can be used standalone on an array of objects, or as a Transform on a stream.
+// Can be used standalone on an array of objects, or as a Transform on a
+// stream.
 //
-// # Examples
+// *Obviously* if the Quenya objects and the source files have gotten out of
+// sync, you'll get all sorts of trouble, so don't do that. There's no sanity
+// checking, we basically take the `contextLine` and `path` fields as gospel
+// and if things don't match up the program will respond with wrongness.
 //
-// As a Transform:
-//
-// ```
-// const quenyaBabel = require('quenya-babel').transform
-//
-// quenya({ files: [...] })
-// .pipe(quenyaBabel())
-// .on('data', doc => void console.log(doc))
-// ```
-//
-// Standalone:
-//
-// ```
-// const quenyaBabel = require('quenya-babel')
-// const quenyaObjects = [...]
-// const enhancedObjects = quenyaBabel(quenyaObjects)
-// ```
+// Adds a `node` field to the objects.
 
-const babel = require('babel-core')
+const memoize = require('lodash.memoize')
 const path = require('path')
 const Transform = require('stream').Transform
 
-//! Standalone Quenya Babel enhancer
+//! Applies the Enhancer to an array of objects
 //
 // Takes an array of objects, returns a Promise that resolves to an array of
 // enhanced objects. The source and destination are not guaranteed to be in the
 // same order.
 //
-// Only objects with a path having an file extension of `.js`, `.es6`, or
-// `.jsx` will be altered, others will be passed on untouched, unless the
-// `discard` option is set to `true`.
+// # Options
 //
-// The `.babelrc` and other standard Babel configuration files are respected,
-// if present. Configuration can be passed with the `babel` option, but note
-// that some fields *will* be overriden in any case, both for the correct
-// functioning of this program and for performance reasons.
-module.exports = function quenyaBabel (docs, opts) {
+// - `discard` (boolean, defaults to `false`): If `true`, return only objects
+//   for which an AST node was found; if `false`, pass-through all others too.
+// - `parser` (function, required): Will be passed a path, should return a
+//   Promise that resolves to the AST or an error.
+// - `filter` (function, defaults to checking the extension matches `.js`):
+//   Will be passed a path, should return truthy if the described file should
+//   be parsed and falsy otherwise.
+//
+// # Examples
+//
+// ```
+// const quenyaESTree = require('quenya-estree')
+//
+// quenyaESTree([...], options)
+// .catch(err => void console.error(err))
+// .then(docs => {
+//   docs.forEach(doc => void console.log(doc))
+//   // ...
+// })
+// ```
+module.exports = function quenyaESTree (docs, opts) {
   // In "defaults" mode, we need the output
   opts = Object.assign({
-    babel: {},
-    errors: false
+    discard: false,
+    filter: function (doc) {
+      return (doc.context !== null) && (path.extname(doc.path) === '.js')
+    }
   }, opts)
 
-  // In "override" mode, the variable is mutated, so we don't
-  Object.assign(opts.babel, {
-    highlightCode: false,
-    sourceMaps: false,
-    code: false
+  if (typeof opts.parser !== 'function' || opts.parser.length !== 1) {
+    return Promise.reject('Parser function not provided or with wrong arity!')
+  }
+
+  // We don't want to parse a file twice, for performance
+  opts.parser = memoize(opts.parser)
+
+  // Nor filter a doc twice, on the odd chance there are duplicates
+  opts.filter = memoize(opts.filter)
+
+  const parseDocs = []
+  const otherDocs = []
+  docs.forEach(doc => {
+    (opts.filter(doc) ? parseDocs : otherDocs).push(doc)
   })
 
-  Promise.all(docs
-    .filter(checkFileExt)
-    .map(doc => transformFile(doc.path, opts.babel))
-  )
-  .then(asts => void console.log(asts))
+  return Promise.all(
+    parseDocs.map(doc => (
+      opts.parser(doc.path, opts.babel)
+      .then(ast => matchNodesToDoc(ast, doc))
+    ))
+  ).then(docs => {
+    if (opts.discard) {
+      docs = docs.filter(doc => doc.node)
+    } else {
+      [].push.apply(docs, otherDocs)
+    }
+
+    return docs
+  })
 }
 
+//! Applies the Enhancer to every object in a stream
+//
+// Options are as for the `quenyaESTree()` function.
+//
+// # Examples
+//
+// ```
+// const quenyaESTree = require('quenya-estree').transform
+//
+// quenya({ files: [...] })
+// .pipe(quenyaESTree(options))
+// .on('data', doc => void console.log(doc))
+// ```
 module.exports.transform = new Transform({
-  transform: function quenyaBabelTransform (doc, _, next) {
+  transform: function quenyaESTreeTransform (doc, _, next) {
     //
   }
 })
 
-//! Promisified version of babel.transformFile
+//! Looks through an AST for nodes matching the line number of associated doc
 //
-// Returns only the AST, not the rest of the result object
-function transformFile (file, opts) {
-  return new Promise((resolve, reject) => {
-    babel.transformFile(file, opts, (err, result) => {
-      if (err) {
-        reject(err)
-      } else {
-        resolve(result.ast)
-      }
-    })
-  })
-}
+// If there's a match, attach it to the `node` field. Otherwise, passthru.
+function matchNodesToDoc (ast, doc) {
+  function matchSubTree (tree, line) {
+    const match = tree.body.filter(
+      node => node.loc.start.line <= line
+    )
 
-//! Checks file extension of a doc's path matches the allowed ones
-function checkFileExt (doc) {
-  return [
-    '.es6',
-    '.js',
-    '.jsx'
-  ].indexOf(path.extname(doc.path)) !== -1
+    const last = match.pop()
+    let prior = match.pop()
+
+    if (last) {
+      if (last.loc.start.line === line) {
+        return last
+      }
+
+      // In some cases (first doc comment is not at top-level), last doesn't
+      // match but prior doesn't exist
+      prior = prior || last
+
+      if (prior.body) {
+        // Gotta dig deeper
+        return matchSubTree(prior.body, line)
+      }
+    }
+  }
+
+  const match = matchSubTree(ast, doc.contextLine)
+  if (match) {
+    doc.node = match
+  }
+
+  return doc
 }
