@@ -1,5 +1,7 @@
 # Quenya ESTree Enhancer
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/passcod/quenya-estree.svg)](https://greenkeeper.io/)
+
 Uses an [ESTree]-compatible parser to enhance [Quenya] doc objects with the JS
 AST node their context points to.
 
